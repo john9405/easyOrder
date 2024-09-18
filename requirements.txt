@@ -1,1 +1,2 @@
 PySide6
+app-store-server-library
