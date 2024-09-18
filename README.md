@@ -2,8 +2,7 @@ Get a customer’s in-app purchases from a receipt using the order ID.
 
 Install packages
 ```
-pip install PySide6
-pip install app-store-server-library
+pip install -r requirements.txt
 ```
 
 Start script
