@@ -6,6 +6,7 @@ import re
 import sys
 import tempfile
 
+import requests
 from PySide6.QtWidgets import QApplication, QWidget, QMessageBox, QFileDialog
 from appstoreserverlibrary.api_client import AppStoreServerAPIClient, APIException
 from appstoreserverlibrary.models.Environment import Environment
@@ -109,6 +110,8 @@ class Widget(QWidget):
                     self.ui.textBrowser.setText(json.dumps(json.loads(temp), ensure_ascii=False, indent=4))
         except APIException as e:
             QMessageBox.warning(self, 'Warning', str(e))
+        except requests.exceptions.ConnectionError:
+            QMessageBox.critical(self, "Error", "HTTPSConnectionPool")
 
     def on_clear(self):
         self.ui.textBrowser.setText("")
