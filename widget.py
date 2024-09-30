@@ -1,5 +1,6 @@
 # This Python file uses the following encoding: utf-8
 import base64
+import binascii
 import json
 import os
 import re
@@ -74,7 +75,7 @@ class Widget(QWidget):
         self.on_start()
         self.thread = Worker()
         self.thread.callback.connect(self.callback)
-        
+
     def on_start(self):
         temp_dir = tempfile.gettempdir()
         filepath = os.path.join(temp_dir, 'eoconfig.json')
@@ -102,15 +103,15 @@ class Widget(QWidget):
 
     def on_submit(self):
         self.ui.textBrowser.setText('Searching...')
-        
+
         file_path = self.ui.filePath.text()
         if not os.path.exists(file_path):
             QMessageBox.critical(self, "Error", "Please enter the correct certificate path!")
             return
-        
+
         with open(file_path, "rb") as f:
             private_key = f.read()
-        
+
         if self.ui.PRODUCTION.isChecked():
             environment = Environment.PRODUCTION
         elif self.ui.SANDBOX.isChecked():
@@ -121,22 +122,22 @@ class Widget(QWidget):
         if pattern.search(issuer_id) is None:
             QMessageBox.critical(self, "Error", "Please enter a issuer id!")
             return
-        
+
         bundle_id = self.ui.bundleId.text()
         if pattern.search(bundle_id) is None:
             QMessageBox.critical(self, "Error", "Please enter a bundle id!")
             return
-        
+
         key_id = self.ui.keyId.text()
         if pattern.search(key_id) is None:
             QMessageBox.critical(self, "Error", "Please enter a key id!")
             return
-        
+
         order_id = self.ui.orderId.text()
         if pattern.search(order_id) is None:
             QMessageBox.critical(self, "Error", "Please enter an order id!")
             return
-        
+
         temp_dir = tempfile.gettempdir()
         filepath = os.path.join(temp_dir, 'eoconfig.json')
         with open(filepath, 'w') as f:
@@ -148,7 +149,7 @@ class Widget(QWidget):
                 'environment': environment,
                 'file_path': file_path
             }))
-        
+
         self.thread.set_value(
             private_key=private_key,
             key_id=key_id,
@@ -158,6 +159,9 @@ class Widget(QWidget):
             order_id=order_id
         )
         self.thread.start()
+
+    def callback(self, text):
+        self.ui.textBrowser.setText(text)
 
     def on_clear(self):
         self.ui.textBrowser.setText("")
