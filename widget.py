@@ -7,6 +7,7 @@ import sys
 import tempfile
 
 import requests
+from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import QApplication, QWidget, QMessageBox, QFileDialog
 from appstoreserverlibrary.api_client import AppStoreServerAPIClient, APIException
 from appstoreserverlibrary.models.Environment import Environment
@@ -16,6 +17,50 @@ from appstoreserverlibrary.models.Environment import Environment
 #     pyside6-uic form.ui -o ui_form.py, or
 #     pyside2-uic form.ui -o ui_form.py
 from ui_form import Ui_Widget
+
+class Worker(QThread):
+    callback = Signal(str)
+
+    def __init__(self):
+        super().__init__()
+        self.private_key = None
+        self.key_id = None
+        self.issuer_id = None
+        self.bundle_id = None
+        self.environment = None
+        self.order_id = None
+
+    def set_value(self, **kwargs):
+        self.private_key = kwargs.get('private_key')
+        self.key_id = kwargs.get('key_id')
+        self.issuer_id = kwargs.get('issuer_id')
+        self.bundle_id = kwargs.get('bundle_id')
+        self.environment = kwargs.get('environment')
+        self.order_id = kwargs.get('order_id')
+
+    def run(self):
+        client = AppStoreServerAPIClient(self.private_key, self.key_id, self.issuer_id, self.bundle_id, self.environment)
+        try:
+            response = client.look_up_order_id(self.order_id)
+            if response.status == 0:
+                for signedTransaction in response.signedTransactions:
+                    try:
+                        temp = signedTransaction.split('.')[1]
+                        temp = temp.replace('-', '+')
+                        temp = temp.replace('_', '/')
+                        while len(temp) % 4 != 0:
+                            temp += '='
+                        temp = base64.b64decode(temp)
+                        print(temp)
+                        self.callback.emit(json.dumps(json.loads(temp), ensure_ascii=False, indent=4))
+                    except binascii.Error:
+                        self.callback.emit(signedTransaction)
+            else:
+                self.callback.emit("OrderId is not valid!")
+        except APIException as e:
+            self.callback.emit(str(e))
+        except requests.exceptions.ConnectionError:
+            self.callback.emit("HTTPSConnectionPool")
 
 
 class Widget(QWidget):
@@ -27,6 +72,8 @@ class Widget(QWidget):
         self.ui.sub_btn.clicked.connect(self.on_submit)
         self.ui.clr_btn.clicked.connect(self.on_clear)
         self.on_start()
+        self.thread = Worker()
+        self.thread.callback.connect(self.callback)
         
     def on_start(self):
         temp_dir = tempfile.gettempdir()
@@ -54,6 +101,8 @@ class Widget(QWidget):
                 self.ui.filePath.setText(file_dialog.selectedFiles()[0])
 
     def on_submit(self):
+        self.ui.textBrowser.setText('Searching...')
+        
         file_path = self.ui.filePath.text()
         if not os.path.exists(file_path):
             QMessageBox.critical(self, "Error", "Please enter the correct certificate path!")
@@ -100,18 +149,15 @@ class Widget(QWidget):
                 'file_path': file_path
             }))
         
-        client = AppStoreServerAPIClient(private_key, key_id, issuer_id, bundle_id, environment)
-        try:
-            response = client.look_up_order_id(order_id)
-            if response.status == 0:
-                for signedTransaction in response.signedTransactions:
-                    temp = signedTransaction.split('.')[1]
-                    temp = base64.b64decode(temp)
-                    self.ui.textBrowser.setText(json.dumps(json.loads(temp), ensure_ascii=False, indent=4))
-        except APIException as e:
-            QMessageBox.warning(self, 'Warning', str(e))
-        except requests.exceptions.ConnectionError:
-            QMessageBox.critical(self, "Error", "HTTPSConnectionPool")
+        self.thread.set_value(
+            private_key=private_key,
+            key_id=key_id,
+            issuer_id=issuer_id,
+            bundle_id=bundle_id,
+            environment=environment,
+            order_id=order_id
+        )
+        self.thread.start()
 
     def on_clear(self):
         self.ui.textBrowser.setText("")
