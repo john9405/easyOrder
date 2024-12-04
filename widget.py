@@ -7,7 +7,7 @@ import sys
 import tempfile
 
 import requests
-from PySide6.QtWidgets import QApplication, QWidget, QMessageBox, QFileDialog
+from PySide2.QtWidgets import QApplication, QWidget, QMessageBox, QFileDialog
 from appstoreserverlibrary.api_client import AppStoreServerAPIClient, APIException
 from appstoreserverlibrary.models.Environment import Environment
 
@@ -66,6 +66,8 @@ class Widget(QWidget):
             environment = Environment.PRODUCTION
         elif self.ui.SANDBOX.isChecked():
             environment = Environment.SANDBOX
+        else:
+            environment = ''
 
         pattern = re.compile(r'^[A-Za-z0-9\-\.]+$')
         issuer_id = self.ui.issuerId.text()
@@ -106,6 +108,9 @@ class Widget(QWidget):
             if response.status == 0:
                 for signedTransaction in response.signedTransactions:
                     temp = signedTransaction.split('.')[1]
+                    if len(temp) % 3 != 0:
+                        l = len(temp) % 3
+                        temp = temp + '=' * l
                     temp = base64.b64decode(temp)
                     self.ui.textBrowser.setText(json.dumps(json.loads(temp), ensure_ascii=False, indent=4))
         except APIException as e:
@@ -121,4 +126,4 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     widget = Widget()
     widget.show()
-    sys.exit(app.exec())
+    sys.exit(app.exec_())
