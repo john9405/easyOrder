@@ -7,15 +7,22 @@ import sys
 import tempfile
 
 import requests
-from PySide2.QtWidgets import QApplication, QWidget, QMessageBox, QFileDialog
+from PySide6.QtWidgets import QApplication, QWidget, QMessageBox, QFileDialog
 from appstoreserverlibrary.api_client import AppStoreServerAPIClient, APIException
 from appstoreserverlibrary.models.Environment import Environment
 
 # Important:
 # You need to run the following command to generate the ui_form.py file
-#     pyside6-uic form.ui -o ui_form.py, or
-#     pyside2-uic form.ui -o ui_form.py
+#     pyside6-uic form.ui -o ui_form.py
 from ui_form import Ui_Widget
+
+
+def load_stylesheet(app):
+    """Load the modern flat style stylesheet."""
+    style_path = os.path.join(os.path.dirname(__file__), 'style.qss')
+    if os.path.exists(style_path):
+        with open(style_path, 'r', encoding='utf-8') as f:
+            app.setStyleSheet(f.read())
 
 
 class Widget(QWidget):
@@ -124,6 +131,7 @@ class Widget(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    load_stylesheet(app)
     widget = Widget()
     widget.show()
     sys.exit(app.exec_())
